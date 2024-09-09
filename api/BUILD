@@ -197,6 +197,7 @@ proto_library(
         "//envoy/extensions/filters/network/dubbo_proxy/router/v3:pkg",
         "//envoy/extensions/filters/network/dubbo_proxy/v3:pkg",
         "//envoy/extensions/filters/network/echo/v3:pkg",
+        "//envoy/extensions/filters/network/clickhouse/v3:pkg",
         "//envoy/extensions/filters/network/ext_authz/v3:pkg",
         "//envoy/extensions/filters/network/http_connection_manager/v3:pkg",
         "//envoy/extensions/filters/network/local_ratelimit/v3:pkg",
