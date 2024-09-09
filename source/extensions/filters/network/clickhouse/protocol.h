@@ -277,6 +277,8 @@ struct ReaderPacketCleintHandshake;
 
 struct ReaderPacketCleintHello : public Reader
 {
+    ReaderVarUInt packet_type;
+
     using reader_vector = std::vector<Reader*>;
     using reader_iterator = reader_vector::const_iterator;
 
@@ -306,6 +308,12 @@ struct ReaderPacketCleintHello : public Reader
 
     bool onData(Buffer::Iterator & data) override
     {
+        if (!packet_type.isReady())
+            if (!packet_type.onData(data))
+                return false;
+        if (packet_type.value != Client::Hello)
+            throw ProtocolException("Hello is expected in handshake");
+
         while (!isReady() && data)
             if ((*current_reader)->onData(data))
                 ++current_reader;
@@ -317,6 +325,7 @@ struct ReaderPacketCleintHello : public Reader
 
     void reset() override
     {
+        packet_type.reset();
         client_name.reset();
         client_version_major.reset();
         client_version_minor.reset();
@@ -606,7 +615,7 @@ struct ReaderPacketServerSSHChallenge : public Reader
 
 struct ReaderPacketServerHello : public Reader
 {
-    using reader_vector = std::vector<Reader*>;
+    using reader_vector = std::vector<std::pair<Reader*, uint64_t>>;
     using reader_iterator = reader_vector::const_iterator;
 
     ReaderPacketServerHandshake & handshake;
@@ -627,24 +636,24 @@ struct ReaderPacketServerHello : public Reader
     ReadPODBinary<unsigned long> nonce;
 
     reader_vector readers {
-        &version_name,
-        &version_major,
-        &version_minor,
-        &dbms_tcp_protocol_version,
-        &time_zone,
-        &server_display_name,
-        &version_patch,
-        &proto_send_chunked_srv,
-        &proto_recv_chunked_srv,
-        &password_complexity_rules,
-        &nonce
+        { &version_name, 0 },
+        { &version_major, 0 },
+        { &version_minor, 0 },
+        { &dbms_tcp_protocol_version, 0 },
+        { &time_zone, ProtocolVersion::DBMS_MIN_REVISION_WITH_SERVER_TIMEZONE },
+        { &server_display_name, ProtocolVersion::DBMS_MIN_REVISION_WITH_SERVER_DISPLAY_NAME },
+        { &version_patch, ProtocolVersion::DBMS_MIN_REVISION_WITH_VERSION_PATCH },
+        { &proto_send_chunked_srv, ProtocolVersion::DBMS_MIN_PROTOCOL_VERSION_WITH_CHUNKED_PACKETS },
+        { &proto_recv_chunked_srv, ProtocolVersion::DBMS_MIN_PROTOCOL_VERSION_WITH_CHUNKED_PACKETS },
+        { &password_complexity_rules, ProtocolVersion::DBMS_MIN_PROTOCOL_VERSION_WITH_PASSWORD_COMPLEXITY_RULES },
+        { &nonce, ProtocolVersion::DBMS_MIN_REVISION_WITH_INTERSERVER_SECRET_V2 }
     };
 
-    size_t current_reader = 0;
+    reader_iterator current_reader {readers.begin()};
 
     bool onData(Buffer::Iterator & data) override;
 
-    bool isReady() override { return current_reader == readers.size(); }
+    bool isReady() override { return current_reader == readers.end(); }
 
     void reset() override
     {
