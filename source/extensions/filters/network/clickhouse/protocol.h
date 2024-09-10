@@ -45,8 +45,10 @@ namespace ProtocolVersion
 struct ProtocolState
 {
     std::mutex mutex;
-    uint64_t tcp_protocol_version = 0;
-    bool is_ssh_based_auth = false;
+    Synchronized<uint64_t> tcp_protocol_version { 0, mutex };
+    Synchronized<bool> is_ssh_based_auth { false, mutex };
+    Synchronized<bool> chunked_client { false, mutex };
+    Synchronized<bool> chunked_server { false, mutex };
 };
 
 namespace Client
@@ -237,7 +239,7 @@ struct ReaderString : public Reader
 };
 
 template <typename T>
-struct ReadPODBinary : public Reader
+struct ReaderPODBinary : public Reader
 {
     using value_type = T;
     value_type value {};
@@ -456,11 +458,8 @@ struct ReaderPacketCleintHandshake : public Reader
                     else
                         state = State::Done;
 
-                    {
-                        std::lock_guard lock(protocol_state.mutex);
-                        protocol_state.tcp_protocol_version = hello.client_tcp_protocol_version.value;
-                        protocol_state.is_ssh_based_auth = (state == State::SSHChalengeRequest);
-                    }
+                    protocol_state.tcp_protocol_version = hello.client_tcp_protocol_version.value;
+                    protocol_state.is_ssh_based_auth = (state == State::SSHChalengeRequest);
 
                     break;
                 }
@@ -633,7 +632,7 @@ struct ReaderPacketServerHello : public Reader
     ReaderString proto_send_chunked_srv;
     ReaderString proto_recv_chunked_srv;
     ReaderPasswordComplexityRules password_complexity_rules;
-    ReadPODBinary<unsigned long> nonce;
+    ReaderPODBinary<unsigned long> nonce;
 
     reader_vector readers {
         { &version_name, 0 },
@@ -691,11 +690,8 @@ struct ReaderPacketServerHandshake : public Reader
 
     bool onData(Buffer::Iterator & data) override
     {
-        {
-            std::lock_guard lock(protocol_state.mutex);
-            tcp_protocol_version = protocol_state.tcp_protocol_version;
-            is_ssh_based_auth = protocol_state.is_ssh_based_auth;
-        }
+        tcp_protocol_version = protocol_state.tcp_protocol_version;
+        is_ssh_based_auth = protocol_state.is_ssh_based_auth;
 
         if (!is_ssh_based_auth)
             state = State::Hello;

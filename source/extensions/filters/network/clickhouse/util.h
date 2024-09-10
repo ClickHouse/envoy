@@ -3,6 +3,7 @@
 #include "envoy/network/filter.h"
 #include <cstdint>
 #include <memory>
+#include <mutex>
 
 namespace Envoy {
 
@@ -21,7 +22,20 @@ public:
     Iterator(Instance & data)
         : len_(data.length()), slices_(data.getRawSlices()), current_(slices_.begin())
     {}
+    Iterator(Instance & data, size_t len)
+        : len_(len), slices_(data.getRawSlices()), current_(slices_.begin())
+    {
+        if (len_ > data.length())
+            throw std::out_of_range("");
+    }
     Iterator(const Iterator &rhs) { *this = rhs; }
+    Iterator(const Iterator &rhs, size_t len)
+    {
+        if (rhs.pos_ + len > rhs.len_)
+            throw std::out_of_range("");
+        *this = rhs;
+        len_ = pos_ + len;
+    }
     Iterator & operator=(const Iterator &rhs)
     {
         len_ = rhs.len_;
@@ -164,12 +178,29 @@ namespace Extensions {
 namespace NetworkFilters {
 namespace ClickHouse {
 
-// Read the variable length integer from the buffer into the value.
-// Offset will be modified after reading.
-// ClickHouse version LEB128 encoding.
-bool readVarUInt(Buffer::Instance& data, uint64_t& offset, uint64_t& value);
+template <typename T>
+struct Synchronized
+{
+    T value {};
+    std::unique_ptr<std::mutex> int_mutex;
+    std::mutex & mutex;
 
-void readStringBinary(Buffer::Instance& data, uint64_t& offset, std::string& s);
+    operator T() const
+    {
+        std::lock_guard lock(mutex);
+        return value;
+    }
+    T operator=(const T & v)
+    {
+        std::lock_guard lock(mutex);
+        value = v;
+        return value;
+    }
+
+    explicit Synchronized(const T & v) : value(v), int_mutex(std::make_unique<std::mutex>()), mutex(*int_mutex) {}
+    Synchronized(const T & v, std::mutex & mutex) : value(v), mutex(mutex) {}
+};
+
 
 } // namespace ClickHouse
 } // namespace NetworkFilters

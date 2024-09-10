@@ -31,13 +31,17 @@ public:
 private:
     ProtocolState protocol_state {};
 
-    std::function<void(uint64_t)> foo;
-
-    ReaderVarUInt client_packet_type;
     ReaderPacketCleintHandshake client_handshake;
     bool client_hands_off {false};
 
+    ReaderPODBinary<uint32_t> client_chunk;
+    bool client_end_of_chunk {true};
+    ReaderVarUInt client_packet_type;
+
+    ReaderPODBinary<uint32_t> server_chunk;
+    bool server_end_of_chunk {true};
     ReaderVarUInt server_packet_type;
+
     ReaderPacketServerHandshake server_handshake;
     bool server_hands_off {false};
 

@@ -2,6 +2,7 @@
 
 //#include "source/common/common/logger.h"
 #include <cstdint>
+#include <mutex>
 #include <stdexcept>
 #include <utility>
 
@@ -30,6 +31,9 @@ bool ReaderPacketCleintAddendum::onData(Buffer::Iterator &data)
             if (!proto_recv_chunked_cl.onData(data))
                 return false;
     }
+
+    handshake.protocol_state.chunked_client = (proto_send_chunked_cl.value == "chunked");
+    handshake.protocol_state.chunked_server = (proto_recv_chunked_cl.value == "chunked");
 
     ready = true;
     return true;
