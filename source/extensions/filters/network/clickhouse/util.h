@@ -171,6 +171,7 @@ namespace Extensions {
 namespace NetworkFilters {
 namespace ClickHouse {
 
+/// Simple synchronized object, can be constructed with either internal or external mutex.
 template <typename T>
 struct Synchronized
 {
@@ -178,20 +179,21 @@ struct Synchronized
     std::unique_ptr<std::mutex> int_mutex;
     std::mutex & mutex;
 
-    operator T() const
+    T get() const
     {
         std::lock_guard lock(mutex);
         return value;
     }
-    T operator=(const T & v)
+    void set(const T & v)
     {
         std::lock_guard lock(mutex);
         value = v;
-        return value;
     }
 
+    Synchronized() : int_mutex(std::make_unique<std::mutex>()), mutex(*int_mutex) {}
     explicit Synchronized(const T & v) : value(v), int_mutex(std::make_unique<std::mutex>()), mutex(*int_mutex) {}
     Synchronized(const T & v, std::mutex & mutex) : value(v), mutex(mutex) {}
+    explicit Synchronized(std::mutex & mutex) : mutex(mutex) {}
 };
 
 

@@ -32,8 +32,8 @@ bool ReaderPacketCleintAddendum::onData(Buffer::Iterator &data)
                 return false;
     }
 
-    handshake.protocol_state.chunked_client = (proto_send_chunked_cl.value == "chunked");
-    handshake.protocol_state.chunked_server = (proto_recv_chunked_cl.value == "chunked");
+    handshake.protocol_state.chunked_client.set(proto_send_chunked_cl.value == "chunked");
+    handshake.protocol_state.chunked_server.set(proto_recv_chunked_cl.value == "chunked");
 
     ready = true;
     return true;

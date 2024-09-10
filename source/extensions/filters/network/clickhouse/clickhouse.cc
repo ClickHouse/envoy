@@ -24,7 +24,7 @@ Network::FilterStatus ClickHouseFilter::onWrite(Buffer::Instance& data, bool end
 
     Buffer::Iterator it(data);
 
-    if (protocol_state.chunked_server)
+    if (protocol_state.chunked_server.get())
     {
         auto packet_processor = [this](Buffer::Iterator & data) -> bool
         {
@@ -134,7 +134,7 @@ Network::FilterStatus ClickHouseFilter::onData(Buffer::Instance& data, [[maybe_u
 
     Buffer::Iterator it(data);
 
-    if (protocol_state.chunked_client)
+    if (protocol_state.chunked_client.get())
     {
         auto packet_processor = [this](Buffer::Iterator & data) -> bool
         {
@@ -210,9 +210,9 @@ Network::FilterStatus ClickHouseFilter::onData(Buffer::Instance& data, [[maybe_u
 
         assert(client_handshake.isReady());
 
-        if (!protocol_state.chunked_client)
+        if (!protocol_state.chunked_client.get())
             client_hands_off = true;
-        if (!protocol_state.chunked_server)
+        if (!protocol_state.chunked_server.get())
             server_hands_off = true;
 
         ENVOY_CONN_LOG(info,

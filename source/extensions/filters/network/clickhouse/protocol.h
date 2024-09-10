@@ -456,8 +456,8 @@ struct ReaderPacketCleintHandshake : public Reader
                     else
                         state = State::Done;
 
-                    protocol_state.tcp_protocol_version = hello.client_tcp_protocol_version.value;
-                    protocol_state.is_ssh_based_auth = (state == State::SSHChalengeRequest);
+                    protocol_state.tcp_protocol_version.set(hello.client_tcp_protocol_version.value);
+                    protocol_state.is_ssh_based_auth.set(state == State::SSHChalengeRequest);
 
                     break;
                 }
@@ -688,8 +688,8 @@ struct ReaderPacketServerHandshake : public Reader
 
     bool onData(Buffer::Iterator & data) override
     {
-        tcp_protocol_version = protocol_state.tcp_protocol_version;
-        is_ssh_based_auth = protocol_state.is_ssh_based_auth;
+        tcp_protocol_version = protocol_state.tcp_protocol_version.get();
+        is_ssh_based_auth = protocol_state.is_ssh_based_auth.get();
 
         if (!is_ssh_based_auth)
             state = State::Hello;
