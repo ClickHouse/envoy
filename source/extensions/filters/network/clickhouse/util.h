@@ -20,59 +20,51 @@ public:
     
     Iterator() = default;
     Iterator(Instance & data)
-        : len_(data.length()), slices_(data.getRawSlices()), current_(slices_.begin())
+        : len(data.length()), slices(data.getRawSlices()), current(slices.begin())
     {}
-    Iterator(Instance & data, size_t len)
-        : len_(len), slices_(data.getRawSlices()), current_(slices_.begin())
+    Iterator(Instance & data, size_t len_)
+        : len(len_), slices(data.getRawSlices()), current(slices.begin())
     {
-        if (len_ > data.length())
-            throw std::out_of_range("");
+        if (len > data.length())
+            throw std::out_of_range(fmt::format("Buffer::Iterator::ctor with length {} from Buffer::Instance with length", len, data.length()));
     }
     Iterator(const Iterator &rhs) { *this = rhs; }
-    Iterator(const Iterator &rhs, size_t len)
+    Iterator(const Iterator &rhs, size_t len_)
     {
-        if (rhs.pos_ + len > rhs.len_)
-            throw std::out_of_range("");
+        if (rhs.pos + len_ > rhs.len)
+            throw std::out_of_range("Buffer::Iterator::ctor from Iterator extends length beyond range");
         *this = rhs;
-        len_ = pos_ + len;
+        len = pos + len_;
     }
     Iterator & operator=(const Iterator &rhs)
     {
-        len_ = rhs.len_;
-        pos_ = rhs.pos_;
-        slices_ = rhs.slices_;
-        current_ = slices_.begin() + (rhs.current_ - rhs.slices_.begin());
-        idx_ = rhs.idx_;
+        len = rhs.len;
+        pos = rhs.pos;
+        slices = rhs.slices;
+        current = slices.begin() + (rhs.current - rhs.slices.begin());
+        idx = rhs.idx;
         return *this;
     }
-    /* inline Iterator& operator=(Type* rhs) {_ptr = rhs; return *this;} */
-    /* inline Iterator& operator=(const Iterator &rhs) {_ptr = rhs._ptr; return *this;} */
 
     inline Iterator& operator+=(difference_type rhs)
     {
         if (rhs < 0)
             return operator-=(-rhs);
 
-        while (pos_ < len_)
+        while (pos < len)
         {
-            if (idx_ + rhs < current_->len_)
+            if (idx + rhs < current->len_)
             {
-                if (len_ - pos_ < static_cast<size_t>(rhs))
-                {
-                    pos_ = len_;
-                    idx_ += len_ - pos_;
-                }
-                else
-                {
-                    pos_ += rhs;
-                    idx_ += rhs;
-                }
+                if (len - pos < static_cast<size_t>(rhs))
+                    throw std::out_of_range("Buffer::Iterator increment beyond range");
+                pos += rhs;
+                idx += rhs;
                 return *this;
             }
-            rhs -= (current_->len_ - idx_);
-            pos_ += (current_->len_ - idx_);
-            idx_ = 0;
-            ++current_;
+            rhs -= (current->len_ - idx);
+            pos += (current->len_ - idx);
+            idx = 0;
+            ++current;
         }
 
         return *this;
@@ -85,91 +77,92 @@ public:
 
         for (;;)
         {
-            if (idx_ >= static_cast<size_t>(rhs))
+            if (idx >= static_cast<size_t>(rhs))
             {
-                idx_ -= rhs;
-                pos_ -= rhs;
+                idx -= rhs;
+                pos -= rhs;
                 return *this;
             }
 
-            if (current_ == slices_.begin())
-                throw std::out_of_range("");
+            if (current == slices.begin())
+                throw std::out_of_range("Buffer::Iterator decrement beyond range");
 
-            rhs -= (idx_ + 1);
-            pos_ -= (idx_ + 1);
-            --current_;
-            idx_ = current_->len_ - 1;
+            rhs -= (idx + 1);
+            pos -= (idx + 1);
+            --current;
+            idx = current->len_ - 1;
         }
     }
 
-    inline reference operator*() const { return reinterpret_cast<pointer>(current_->mem_)[idx_]; }
-    inline pointer operator->() const { return reinterpret_cast<pointer>(current_->mem_) + idx_; }
-//    inline reference operator[](difference_type rhs) const {return _ptr[rhs];}
+    inline reference operator*() const { return reinterpret_cast<pointer>(current->mem_)[idx]; }
+    inline pointer operator->() const { return reinterpret_cast<pointer>(current->mem_) + idx; }
     
     inline Iterator& operator++()
     {
         if (!(*this))
-            throw std::out_of_range("");
+            throw std::out_of_range("Buffer::Iterator increment beyond range");
 
-        if (++idx_ == current_->len_)
+        if (++idx == current->len_)
         {
-            idx_ = 0;
-            ++current_;
+            idx = 0;
+            ++current;
         }
-        ++pos_;
+        ++pos;
 
         return *this; 
     }
     inline Iterator& operator--()
     {
-        if (pos_ == 0)
-            throw std::out_of_range("");
+        if (pos == 0)
+            throw std::out_of_range("Buffer::Iterator decrement beyond range");
         
-        if (idx_ == 0)
-            idx_ = ++current_->len_ - 1;
-        --pos_;
+        if (idx == 0)
+            idx = ++current->len_ - 1;
+        --pos;
 
         return *this;
     }
     inline Iterator operator++(int) const { Iterator tmp(*this); return ++tmp; }
     inline Iterator operator--(int) const { Iterator tmp(*this); return --tmp; }
-    /* inline Iterator operator+(const Iterator& rhs) {return Iterator(_ptr+rhs.ptr);} */
-    inline difference_type operator-(const Iterator& rhs) const { return static_cast<difference_type>(pos_) - rhs.pos_; }
+
+    inline difference_type operator-(const Iterator& rhs) const { return static_cast<difference_type>(pos) - rhs.pos; }
     inline Iterator operator+(difference_type rhs) const { return Iterator(*this).operator+=(rhs); }
     inline Iterator operator-(difference_type rhs) const { return Iterator(*this).operator-=(rhs); }
-//    friend inline Iterator operator+(difference_type lhs, const Iterator& rhs) {return Iterator(lhs+rhs._ptr);}
-//    friend inline Iterator operator-(difference_type lhs, const Iterator& rhs) {return Iterator(lhs-rhs._ptr);}
     
-    inline bool operator==(const Iterator& rhs) const { return pos_ == rhs.pos_; }
+    inline bool operator==(const Iterator& rhs) const { return pos == rhs.pos; }
     inline bool operator!=(const Iterator& rhs) const { return !operator==(rhs); }
     inline bool operator>(const Iterator& rhs) const { return *this - rhs > 0; }
     inline bool operator<(const Iterator& rhs) const { return !(operator>(rhs) || operator==(rhs)); }
     inline bool operator>=(const Iterator& rhs) const { return operator==(rhs) || operator>(rhs); }
     inline bool operator<=(const Iterator& rhs) const { return operator==(rhs) || operator<(rhs); }
 
-    inline operator bool() const { return pos_ < len_; }
+    inline operator bool() const { return pos < len; }
+
+    inline difference_type position() const { return pos; }
+    inline difference_type available() const { return len - pos; }
+    inline difference_type length() const { return len; }
 
     inline Iterator begin() const
     {
         Iterator tmp(*this);
-        tmp.idx_ = 0;
-        tmp.pos_ = 0;
-        tmp.current_ = tmp.slices_.begin();
+        tmp.idx = 0;
+        tmp.pos = 0;
+        tmp.current = tmp.slices.begin();
         return tmp;
     }
 
     inline Iterator end() const
     {
         Iterator tmp(*this);
-        tmp += (len_ - pos_);
+        tmp += (len - pos);
         return tmp;
     }
 private:
-    size_t len_ = 0;
-    size_t pos_ = 0;
-    RawSliceVector slices_;
-    RawSliceVector::iterator current_;
-    size_t idx_ = 0;
+    size_t len = 0;
+    size_t pos = 0;
+    RawSliceVector slices;
+    RawSliceVector::iterator current;
+    size_t idx = 0;
 };
 
 } // namespace Buffer

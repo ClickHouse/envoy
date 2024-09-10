@@ -74,10 +74,9 @@ Network::FilterStatus ClickHouseFilter::onWrite(Buffer::Instance& data, bool end
             if (server_end_of_chunk)
                 server_end_of_chunk = false;
 
-            auto available = it.end() - it;
-            if (available < server_chunk.value)
+            if (it.available() < server_chunk.value)
             {
-                server_chunk.value -= available;
+                server_chunk.value -= it.available();
                 // process it
                 packet_processor(it);
                 return Network::FilterStatus::Continue;
@@ -185,10 +184,9 @@ Network::FilterStatus ClickHouseFilter::onData(Buffer::Instance& data, [[maybe_u
             if (client_end_of_chunk)
                 client_end_of_chunk = false;
 
-            auto available = it.end() - it;
-            if (available < client_chunk.value)
+            if (it.available() < client_chunk.value)
             {
-                client_chunk.value -= available;
+                client_chunk.value -= it.available();
                 // process it
                 packet_processor(it);
                 return Network::FilterStatus::Continue;

@@ -210,8 +210,7 @@ struct ReaderString : public Reader
             if (!size.onData(data))
                 return false;
 
-        size_t available = data.end() - data;
-
+        size_t available = data.available();
         if (available <= size.value - i)
         {
             value.append(data, data.end());
@@ -247,8 +246,7 @@ struct ReaderPODBinary : public Reader
 
     bool onData(Buffer::Iterator & data) override
     {
-        size_t available = data.end() - data;
-
+        size_t available = data.available();
         if (available <= sizeof(T) - i)
         {
             std::copy(data, data.end(), reinterpret_cast<char*>(&value) + i);
