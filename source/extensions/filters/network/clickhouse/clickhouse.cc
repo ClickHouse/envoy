@@ -53,7 +53,7 @@ Network::FilterStatus ClickHouseFilter::onWrite(Buffer::Instance& data, bool end
                 {
                     // if client_chunk.value > 0 it's a chunk continuation
                     if (server_chunk.value)
-                        ENVOY_CONN_LOG(debug, "ClickHouse from server: chunk started, size {}", write_callbacks_->connection(), server_chunk.value);
+                        ENVOY_CONN_LOG(debug, "ClickHouse from server: chunk continued, size {}", write_callbacks_->connection(), server_chunk.value);
                     else
                         ENVOY_CONN_LOG(debug, "ClickHouse from server: chunk ended", write_callbacks_->connection());
                 }
@@ -163,7 +163,7 @@ Network::FilterStatus ClickHouseFilter::onData(Buffer::Instance& data, [[maybe_u
                 {
                     // if client_chunk.value > 0 it's a chunk continuation
                     if (client_chunk.value)
-                        ENVOY_CONN_LOG(debug, "ClickHouse from client: chunk started, size {}", read_callbacks_->connection(), client_chunk.value);
+                        ENVOY_CONN_LOG(debug, "ClickHouse from client: chunk continued, size {}", read_callbacks_->connection(), client_chunk.value);
                     else
                         ENVOY_CONN_LOG(debug, "ClickHouse from client: chunk ended", read_callbacks_->connection());
                 }
