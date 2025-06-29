@@ -846,8 +846,18 @@ void ListenerManagerImpl::drainFilterChains(ListenerImplPtr&& draining_listener,
                                               std::move(draining_listener), workers_.size());
   draining_group->getDrainingListener().diffFilterChain(
       new_listener, [&draining_group](Network::DrainableFilterChain& filter_chain) mutable {
+        // filter chain impl -> factory -> startDraining()
         filter_chain.startDraining();
+        ENVOY_LOG(debug, "jianfei start draining filter chain {}", filter_chain.name());
         draining_group->addFilterChainToDrain(filter_chain);
+        // NEW: Set response flag for active connections on this filter chain
+        //filter_chain.forEachActiveConnection([](Network::Connection& connection) {
+          //if (auto stream_info = connection.streamInfo(); stream_info != nullptr) {
+            //stream_info->setResponseFlag(StreamInfo::CoreResponseFlag::XdsConnectionDraining);
+            // Alternative: use existing DownstreamConnectionTermination flag                            
+            // stream_info->setResponseFlag(StreamInfo::CoreResponseFlag::DownstreamConnectionTermination);
+          //}                                                
+        }); 
       });
   auto filter_chain_size = draining_group->numDrainingFilterChains();
   stats_.total_filter_chains_draining_.add(filter_chain_size);
